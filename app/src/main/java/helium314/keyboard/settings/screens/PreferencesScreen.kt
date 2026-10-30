@@ -63,6 +63,8 @@ fun PreferencesScreen(
             Settings.PREF_KEYPRESS_SOUND_VOLUME else null,
         if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
             Settings.PREF_KEY_SOUND_PACK else null,
+        if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
+            Settings.PREF_SOUND_ON_SILENT else null,
         *(if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON)
                 && prefs.getString(Settings.PREF_KEY_SOUND_PACK, Defaults.PREF_KEY_SOUND_PACK) == "custom")
             AudioAndHapticFeedbackManager.CUSTOM_SOUND_NAMES.map { "custom_sound_$it" }.toTypedArray()
@@ -171,6 +173,9 @@ fun createPreferencesSettings(context: Context) = listOf(
             ),
             Defaults.PREF_KEY_SOUND_PACK
         )
+    },
+    Setting(context, Settings.PREF_SOUND_ON_SILENT, R.string.sound_on_silent, R.string.sound_on_silent_summary) {
+        SwitchPreference(it, Defaults.PREF_SOUND_ON_SILENT)
     },
     Setting(context, "custom_sound_key", R.string.custom_sound_key) { CustomSoundPreference(it, "key") },
     Setting(context, "custom_sound_space", R.string.custom_sound_space) { CustomSoundPreference(it, "space") },

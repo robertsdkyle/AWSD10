@@ -70,7 +70,13 @@ public final class AudioAndHapticFeedbackManager {
     private boolean playCustomSound(final int code) {
         if (mContext == null) return false;
         final float volume = mSettingsValues.mKeypressSoundVolume < 0 ? 0.6f : mSettingsValues.mKeypressSoundVolume;
-        return KeySoundEngine.play(mContext, mSettingsValues.mKeySoundPack, code, volume);
+        return KeySoundEngine.play(mContext, mSettingsValues.mKeySoundPack, code, volume, useMediaStream());
+    }
+
+    /** On silent, the system sound stream is muted, so play through the media stream instead. */
+    private boolean useMediaStream() {
+        return mSettingsValues.mSoundOnSilent && mAudioManager != null
+                && mAudioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL;
     }
 
     /** Called when autocorrect replaced the typed word. */
@@ -104,6 +110,8 @@ public final class AudioAndHapticFeedbackManager {
         if (mSettingsValues == null || !mSettingsValues.mSoundOn || mAudioManager == null || mDoNotDisturb) {
             return false;
         }
+        // "play sounds on silent" ignores the ringer (Do Not Disturb still silences everything)
+        if (mSettingsValues.mSoundOnSilent && !"system".equals(mSettingsValues.mKeySoundPack)) return true;
         return mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_NORMAL;
     }
 

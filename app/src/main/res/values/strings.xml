@@ -382,6 +382,8 @@
     <string name="gif" tools:keep="@string/gif">GIF</string>
     <string name="gif_close">Close GIFs</string>
     <string name="key_sound_pack">Key sound</string>
+    <string name="sound_on_silent">Play sounds on silent</string>
+    <string name="sound_on_silent_summary">Plays key sounds even when your phone is on silent or vibrate, using media volume. Not for System default. Do Not Disturb still mutes them.</string>
     <string name="key_sound_pack_system">System default</string>
     <string name="key_sound_pack_typewriter">Typewriter</string>
     <string name="key_sound_pack_retro">Retro 8-bit</string>

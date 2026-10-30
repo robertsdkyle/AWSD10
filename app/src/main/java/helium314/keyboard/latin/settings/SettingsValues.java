@@ -150,6 +150,7 @@ public class SettingsValues {
     public final int mKeypressVibrationDuration;
     public final float mKeypressSoundVolume;
     public final String mKeySoundPack;
+    public final boolean mSoundOnSilent;
     public final boolean mAutoCorrectionEnabledPerUserSettings;
     public final boolean mAutoCorrectCapitalizedSuggestion;
     public final boolean mBackspaceRevertsAutocorrect;
@@ -256,6 +257,7 @@ public class SettingsValues {
         mKeypressVibrationDuration = prefs.getInt(Settings.PREF_VIBRATION_DURATION_SETTINGS, Defaults.PREF_VIBRATION_DURATION_SETTINGS);
         mKeypressSoundVolume = prefs.getFloat(Settings.PREF_KEYPRESS_SOUND_VOLUME, Defaults.PREF_KEYPRESS_SOUND_VOLUME);
         mKeySoundPack = prefs.getString(Settings.PREF_KEY_SOUND_PACK, Defaults.PREF_KEY_SOUND_PACK);
+        mSoundOnSilent = prefs.getBoolean(Settings.PREF_SOUND_ON_SILENT, Defaults.PREF_SOUND_ON_SILENT);
         mEnableEmojiAltPhysicalKey = prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY, Defaults.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY);
         mEnableHardwareKeyboard = prefs.getBoolean(Settings.PREF_ENABLE_HARDWARE_KEYBOARD, Defaults.PREF_ENABLE_HARDWARE_KEYBOARD);
         mGestureInputEnabled = JniUtils.sHaveGestureLib && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT);

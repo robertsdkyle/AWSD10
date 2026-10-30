@@ -106,10 +106,12 @@ object KeySoundEngine {
         loadedPack = null
     }
 
+    private var poolUsesMedia = false
+
     private fun ensurePool(): SoundPool = pool ?: SoundPool.Builder()
         .setMaxStreams(8)
         .setAudioAttributes(AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+            .setUsage(if (poolUsesMedia) AudioAttributes.USAGE_MEDIA else AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build())
         .build().also { pool = it }
@@ -128,7 +130,6 @@ object KeySoundEngine {
         }
         val res = STATIC_PACKS[pack] ?: REACTIVE_PACKS[pack] ?: return
         res.forEach { r -> if (r !in ids) ids[r] = p.load(context, r, 1) }
-        // the game show buzzer can come from autocorrect even while typing letters, load it too
     }
 
     private fun play(res: Int, volume: Float, rate: Float = 1f, delayMs: Long = 0): Int {
@@ -154,8 +155,13 @@ object KeySoundEngine {
 
     /** Plays the sound for a key press. Returns false if the system click should be used instead. */
     @JvmStatic
-    fun play(context: Context, pack: String?, code: Int, volume: Float): Boolean {
+    fun play(context: Context, pack: String?, code: Int, volume: Float, mediaStream: Boolean): Boolean {
         if (pack == null || pack == "system") return false
+        if (mediaStream != poolUsesMedia) {
+            // silent mode mutes system sounds; switch between the system and media stream when needed
+            reload()
+            poolUsesMedia = mediaStream
+        }
         prepare(context, pack)
         val kind = kindOf(code)
         trackState(code, kind)
