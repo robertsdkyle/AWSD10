@@ -7,6 +7,8 @@
 package helium314.keyboard.latin;
 
 import android.content.Context;
+
+import java.io.File;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.SoundPool;
@@ -18,6 +20,7 @@ import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.settings.SettingsValues;
+import helium314.keyboard.latin.utils.DeviceProtectedUtils;
 
 /**
  * This class gathers audio feedback and haptic feedback functions.
@@ -54,48 +57,97 @@ public final class AudioAndHapticFeedbackManager {
         mContext = context.getApplicationContext();
     }
 
-    // custom key sound packs: [pack][key, space, delete, enter]
-    private static final String[] SOUND_PACKS = { "typewriter", "retro", "bubble", "thock" };
+    // custom key sound packs: [pack][key, space, delete, enter, extra key variants...]
+    private static final String[] SOUND_PACKS = {
+        "typewriter", "retro", "bubble", "thock", "piano", "rain", "laser", "wood", "arcade", "chimes", "drums"
+    };
     private static final int[][] SOUND_RES = {
         { R.raw.snd_typewriter_key, R.raw.snd_typewriter_space, R.raw.snd_typewriter_delete, R.raw.snd_typewriter_enter },
         { R.raw.snd_retro_key, R.raw.snd_retro_space, R.raw.snd_retro_delete, R.raw.snd_retro_enter },
         { R.raw.snd_bubble_key, R.raw.snd_bubble_space, R.raw.snd_bubble_delete, R.raw.snd_bubble_enter },
         { R.raw.snd_thock_key, R.raw.snd_thock_space, R.raw.snd_thock_delete, R.raw.snd_thock_enter },
+        { R.raw.snd_piano_key, R.raw.snd_piano_space, R.raw.snd_piano_delete, R.raw.snd_piano_enter,
+                R.raw.snd_piano_key0, R.raw.snd_piano_key1, R.raw.snd_piano_key2, R.raw.snd_piano_key3, R.raw.snd_piano_key4 },
+        { R.raw.snd_rain_key, R.raw.snd_rain_space, R.raw.snd_rain_delete, R.raw.snd_rain_enter },
+        { R.raw.snd_laser_key, R.raw.snd_laser_space, R.raw.snd_laser_delete, R.raw.snd_laser_enter },
+        { R.raw.snd_wood_key, R.raw.snd_wood_space, R.raw.snd_wood_delete, R.raw.snd_wood_enter },
+        { R.raw.snd_arcade_key, R.raw.snd_arcade_space, R.raw.snd_arcade_delete, R.raw.snd_arcade_enter },
+        { R.raw.snd_chimes_key, R.raw.snd_chimes_space, R.raw.snd_chimes_delete, R.raw.snd_chimes_enter },
+        { R.raw.snd_drums_key, R.raw.snd_drums_space, R.raw.snd_drums_delete, R.raw.snd_drums_enter },
     };
+    /** File names for the "custom" pack, stored in [getCustomSoundDir]. */
+    public static final String[] CUSTOM_SOUND_NAMES = { "key", "space", "delete", "enter" };
     private Context mContext;
     private SoundPool mSoundPool;
-    private int[][] mSoundIds;
+    private String mLoadedPack;
+    private int[] mSoundIds;
 
-    /** Plays a sound from the chosen pack, returns false if the system click should be used instead. */
-    private boolean playCustomSound(final int code) {
-        final String pack = mSettingsValues.mKeySoundPack;
-        int packIndex = -1;
-        for (int i = 0; i < SOUND_PACKS.length; i++)
-            if (SOUND_PACKS[i].equals(pack)) packIndex = i;
-        if (packIndex < 0 || mContext == null) return false;
+    public static File getCustomSoundDir(final Context context) {
+        return new File(DeviceProtectedUtils.getFilesDir(context), "custom_sounds");
+    }
+
+    /** Call after custom sound files change, so they get loaded again. */
+    public void reloadSounds() {
+        if (mSoundPool != null) mSoundPool.release();
+        mSoundPool = null;
+        mLoadedPack = null;
+    }
+
+    private void loadPack(final String pack) {
         if (mSoundPool == null) {
             mSoundPool = new SoundPool.Builder()
-                    .setMaxStreams(4)
+                    .setMaxStreams(6)
                     .setAudioAttributes(new AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                             .build())
                     .build();
-            mSoundIds = new int[SOUND_RES.length][];
-            for (int p = 0; p < SOUND_RES.length; p++) {
-                mSoundIds[p] = new int[SOUND_RES[p].length];
-                for (int s = 0; s < SOUND_RES[p].length; s++)
-                    mSoundIds[p][s] = mSoundPool.load(mContext, SOUND_RES[p][s], 1);
-            }
+        } else if (mSoundIds != null) {
+            for (int id : mSoundIds) if (id != 0) mSoundPool.unload(id);
         }
-        final int which = switch (code) {
+        mLoadedPack = pack;
+        if ("custom".equals(pack)) {
+            final File dir = getCustomSoundDir(mContext);
+            mSoundIds = new int[CUSTOM_SOUND_NAMES.length];
+            for (int i = 0; i < CUSTOM_SOUND_NAMES.length; i++) {
+                final File f = new File(dir, CUSTOM_SOUND_NAMES[i]);
+                mSoundIds[i] = f.exists() ? mSoundPool.load(f.getAbsolutePath(), 1) : 0;
+            }
+            return;
+        }
+        int packIndex = -1;
+        for (int i = 0; i < SOUND_PACKS.length; i++)
+            if (SOUND_PACKS[i].equals(pack)) packIndex = i;
+        if (packIndex < 0) {
+            mSoundIds = null;
+            return;
+        }
+        mSoundIds = new int[SOUND_RES[packIndex].length];
+        for (int i = 0; i < mSoundIds.length; i++)
+            mSoundIds[i] = mSoundPool.load(mContext, SOUND_RES[packIndex][i], 1);
+    }
+
+    /** Plays a sound from the chosen pack, returns false if the system click should be used instead. */
+    private boolean playCustomSound(final int code) {
+        final String pack = mSettingsValues.mKeySoundPack;
+        if (pack == null || "system".equals(pack) || mContext == null) return false;
+        if (!pack.equals(mLoadedPack)) loadPack(pack);
+        if (mSoundIds == null) return false;
+        int which = switch (code) {
             case Constants.CODE_SPACE -> 1;
             case KeyCode.DELETE -> 2;
             case Constants.CODE_ENTER -> 3;
             default -> 0;
         };
+        // packs with extra key variants (piano) pick one based on the key, so the same key plays the same note
+        if (which == 0 && mSoundIds.length > 4)
+            which = 4 + Math.floorMod(code, mSoundIds.length - 4);
+        // a custom sound may be missing for some keys: fall back to the "key" sound, then the system click
+        int id = mSoundIds[which];
+        if (id == 0) id = mSoundIds[0];
+        if (id == 0) return false;
         final float volume = mSettingsValues.mKeypressSoundVolume < 0 ? 0.6f : mSettingsValues.mKeypressSoundVolume;
-        mSoundPool.play(mSoundIds[packIndex][which], volume, volume, 1, 0, 1f);
+        mSoundPool.play(id, volume, volume, 1, 0, 1f);
         return true;
     }
 

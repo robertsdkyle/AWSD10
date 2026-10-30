@@ -28,6 +28,7 @@ import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
+import helium314.keyboard.settings.preferences.CustomSoundPreference
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.SwitchPreferenceWithEmojiDictWarning
@@ -62,6 +63,10 @@ fun PreferencesScreen(
             Settings.PREF_KEYPRESS_SOUND_VOLUME else null,
         if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
             Settings.PREF_KEY_SOUND_PACK else null,
+        *(if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON)
+                && prefs.getString(Settings.PREF_KEY_SOUND_PACK, Defaults.PREF_KEY_SOUND_PACK) == "custom")
+            AudioAndHapticFeedbackManager.CUSTOM_SOUND_NAMES.map { "custom_sound_$it" }.toTypedArray()
+        else emptyArray()),
         Settings.PREF_SAVE_SUBTYPE_PER_APP,
         Settings.PREF_SHOW_EMOJI_DESCRIPTIONS,
         R.string.settings_category_additional_keys,
@@ -136,10 +141,22 @@ fun createPreferencesSettings(context: Context) = listOf(
                 stringResource(R.string.key_sound_pack_retro) to "retro",
                 stringResource(R.string.key_sound_pack_bubble) to "bubble",
                 stringResource(R.string.key_sound_pack_thock) to "thock",
+                stringResource(R.string.key_sound_pack_piano) to "piano",
+                stringResource(R.string.key_sound_pack_rain) to "rain",
+                stringResource(R.string.key_sound_pack_laser) to "laser",
+                stringResource(R.string.key_sound_pack_wood) to "wood",
+                stringResource(R.string.key_sound_pack_arcade) to "arcade",
+                stringResource(R.string.key_sound_pack_chimes) to "chimes",
+                stringResource(R.string.key_sound_pack_drums) to "drums",
+                stringResource(R.string.key_sound_pack_custom) to "custom",
             ),
             Defaults.PREF_KEY_SOUND_PACK
         )
     },
+    Setting(context, "custom_sound_key", R.string.custom_sound_key) { CustomSoundPreference(it, "key") },
+    Setting(context, "custom_sound_space", R.string.custom_sound_space) { CustomSoundPreference(it, "space") },
+    Setting(context, "custom_sound_delete", R.string.custom_sound_delete) { CustomSoundPreference(it, "delete") },
+    Setting(context, "custom_sound_enter", R.string.custom_sound_enter) { CustomSoundPreference(it, "enter") },
     Setting(context, Settings.PREF_SHOW_EMOJI_DESCRIPTIONS, R.string.show_emoji_descriptions) {
         SwitchPreferenceWithEmojiDictWarning(it, Defaults.PREF_SHOW_EMOJI_DESCRIPTIONS)
     },
