@@ -7,7 +7,9 @@
 package helium314.keyboard.latin;
 
 import android.content.Context;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
+import android.media.SoundPool;
 import android.os.Vibrator;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -49,6 +51,52 @@ public final class AudioAndHapticFeedbackManager {
     private void initInternal(final Context context) {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        mContext = context.getApplicationContext();
+    }
+
+    // custom key sound packs: [pack][key, space, delete, enter]
+    private static final String[] SOUND_PACKS = { "typewriter", "retro", "bubble", "thock" };
+    private static final int[][] SOUND_RES = {
+        { R.raw.snd_typewriter_key, R.raw.snd_typewriter_space, R.raw.snd_typewriter_delete, R.raw.snd_typewriter_enter },
+        { R.raw.snd_retro_key, R.raw.snd_retro_space, R.raw.snd_retro_delete, R.raw.snd_retro_enter },
+        { R.raw.snd_bubble_key, R.raw.snd_bubble_space, R.raw.snd_bubble_delete, R.raw.snd_bubble_enter },
+        { R.raw.snd_thock_key, R.raw.snd_thock_space, R.raw.snd_thock_delete, R.raw.snd_thock_enter },
+    };
+    private Context mContext;
+    private SoundPool mSoundPool;
+    private int[][] mSoundIds;
+
+    /** Plays a sound from the chosen pack, returns false if the system click should be used instead. */
+    private boolean playCustomSound(final int code) {
+        final String pack = mSettingsValues.mKeySoundPack;
+        int packIndex = -1;
+        for (int i = 0; i < SOUND_PACKS.length; i++)
+            if (SOUND_PACKS[i].equals(pack)) packIndex = i;
+        if (packIndex < 0 || mContext == null) return false;
+        if (mSoundPool == null) {
+            mSoundPool = new SoundPool.Builder()
+                    .setMaxStreams(4)
+                    .setAudioAttributes(new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build())
+                    .build();
+            mSoundIds = new int[SOUND_RES.length][];
+            for (int p = 0; p < SOUND_RES.length; p++) {
+                mSoundIds[p] = new int[SOUND_RES[p].length];
+                for (int s = 0; s < SOUND_RES[p].length; s++)
+                    mSoundIds[p][s] = mSoundPool.load(mContext, SOUND_RES[p][s], 1);
+            }
+        }
+        final int which = switch (code) {
+            case Constants.CODE_SPACE -> 1;
+            case KeyCode.DELETE -> 2;
+            case Constants.CODE_ENTER -> 3;
+            default -> 0;
+        };
+        final float volume = mSettingsValues.mKeypressSoundVolume < 0 ? 0.6f : mSettingsValues.mKeypressSoundVolume;
+        mSoundPool.play(mSoundIds[packIndex][which], volume, volume, 1, 0, 1f);
+        return true;
     }
 
     public void performHapticAndAudioFeedback(
@@ -87,6 +135,9 @@ public final class AudioAndHapticFeedbackManager {
             return;
         }
         if (hapticEvent != HapticEvent.KEY_PRESS) {
+            return;
+        }
+        if (playCustomSound(code)) {
             return;
         }
         final int sound = switch (code) {

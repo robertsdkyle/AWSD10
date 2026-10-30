@@ -381,6 +381,12 @@
     <string name="emoji" tools:keep="@string/emoji">Emoji</string>
     <string name="gif" tools:keep="@string/gif">GIF</string>
     <string name="gif_close">Close GIFs</string>
+    <string name="key_sound_pack">Key sound</string>
+    <string name="key_sound_pack_system">System default</string>
+    <string name="key_sound_pack_typewriter">Typewriter</string>
+    <string name="key_sound_pack_retro">Retro 8-bit</string>
+    <string name="key_sound_pack_bubble">Bubble pop</string>
+    <string name="key_sound_pack_thock">Mechanical thock</string>
     <string name="gif_trending">Trending</string>
     <string name="gif_powered_by">Powered by GIPHY</string>
     <string name="gif_loading">Loading GIFs…</string>

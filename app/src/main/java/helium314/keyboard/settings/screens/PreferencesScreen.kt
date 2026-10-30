@@ -60,6 +60,8 @@ fun PreferencesScreen(
         Settings.PREF_SOUND_ON,
         if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
             Settings.PREF_KEYPRESS_SOUND_VOLUME else null,
+        if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
+            Settings.PREF_KEY_SOUND_PACK else null,
         Settings.PREF_SAVE_SUBTYPE_PER_APP,
         Settings.PREF_SHOW_EMOJI_DESCRIPTIONS,
         R.string.settings_category_additional_keys,
@@ -124,6 +126,19 @@ fun createPreferencesSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_SOUND_ON, R.string.sound_on_keypress) {
         SwitchPreference(it, Defaults.PREF_SOUND_ON)
+    },
+    Setting(context, Settings.PREF_KEY_SOUND_PACK, R.string.key_sound_pack) {
+        ListPreference(
+            it,
+            listOf(
+                stringResource(R.string.key_sound_pack_system) to "system",
+                stringResource(R.string.key_sound_pack_typewriter) to "typewriter",
+                stringResource(R.string.key_sound_pack_retro) to "retro",
+                stringResource(R.string.key_sound_pack_bubble) to "bubble",
+                stringResource(R.string.key_sound_pack_thock) to "thock",
+            ),
+            Defaults.PREF_KEY_SOUND_PACK
+        )
     },
     Setting(context, Settings.PREF_SHOW_EMOJI_DESCRIPTIONS, R.string.show_emoji_descriptions) {
         SwitchPreferenceWithEmojiDictWarning(it, Defaults.PREF_SHOW_EMOJI_DESCRIPTIONS)
