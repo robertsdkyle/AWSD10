@@ -1,4 +1,5 @@
 import com.android.build.api.variant.ApplicationVariant
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -22,7 +23,7 @@ android {
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
         // GIF panel: put giphyApiKey=YOUR_KEY in local.properties (never commit it), or set GIPHY_API_KEY
-        val localProps = java.util.Properties().apply {
+        val localProps = Properties().apply {
             val f = rootProject.file("local.properties")
             if (f.exists()) f.inputStream().use { load(it) }
         }
