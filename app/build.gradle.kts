@@ -31,6 +31,17 @@ android {
         buildConfigField("String", "GIPHY_API_KEY", "\"$giphyKey\"")
     }
 
+    // fixed debug key (from the DEBUG_KEYSTORE_B64 secret in CI), so each new build installs as an update
+    val fixedDebugKey = file("awsd10-debug.keystore")
+    if (fixedDebugKey.exists()) signingConfigs {
+        getByName("debug") {
+            storeFile = fixedDebugKey
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
