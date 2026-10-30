@@ -32,6 +32,7 @@ import helium314.keyboard.keyboard.Keyboard;
 import helium314.keyboard.keyboard.KeyboardElement;
 import helium314.keyboard.keyboard.KeyboardLayoutSet;
 import helium314.keyboard.keyboard.KeyboardSwitcher;
+import helium314.keyboard.keyboard.gif.GifQuery;
 import helium314.keyboard.keyboard.emoji.RecentEmojis;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.CapsMode;
@@ -748,6 +749,22 @@ public final class InputLogic {
                 if (!sv.mClipboardHistoryEnabled) {
                     paste(mLatinIME.getCurrentInputEditorInfo().packageName);
                 }
+                break;
+            case KeyCode.GIF:
+                // commit whatever word is being typed, then use the last few words as the GIF search
+                commitTyped(sv, LastComposedWord.NOT_A_SEPARATOR);
+                // never send what's typed in password / incognito fields to GIPHY
+                final boolean privateField = sv.mInputAttributes.mIsPasswordField || sv.mIncognitoModeEnabled;
+                final GifQuery gifQuery = privateField ? GifQuery.EMPTY
+                        : GifQuery.fromTextBeforeCursor(mConnection.getTextBeforeCursor(80, 0));
+                final int gifCursor = mConnection.getExpectedSelectionStart();
+                KeyboardSwitcher.getInstance().toggleGifPanel(gifQuery, length -> {
+                    // only delete the typed words if the cursor hasn't moved since the panel opened
+                    if (mConnection.getExpectedSelectionStart() != gifCursor) return;
+                    mConnection.beginBatchEdit();
+                    mConnection.deleteTextBeforeCursor(length);
+                    mConnection.endBatchEdit();
+                });
                 break;
             case KeyCode.CLIPBOARD_PASTE:
                 paste(mLatinIME.getCurrentInputEditorInfo().packageName);

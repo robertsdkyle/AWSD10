@@ -379,6 +379,15 @@
     <string name="redo" tools:keep="@string/redo">Redo</string>
     <string name="close_history" tools:keep="@string/close_history">Close clipboard history</string>
     <string name="emoji" tools:keep="@string/emoji">Emoji</string>
+    <string name="gif" tools:keep="@string/gif">GIF</string>
+    <string name="gif_close">Close GIFs</string>
+    <string name="gif_trending">Trending</string>
+    <string name="gif_powered_by">Powered by GIPHY</string>
+    <string name="gif_loading">Loading GIFs…</string>
+    <string name="gif_sending">Sending…</string>
+    <string name="gif_no_results">No GIFs found</string>
+    <string name="gif_load_failed">Couldn\'t load GIFs. Check your connection.</string>
+    <string name="gif_missing_key">No GIPHY API key. Add giphyApiKey to local.properties and rebuild.</string>
     <string name="floating" tools:keep="@string/floating">Floating Keyboard</string>
     <!-- Title of the setting to set clipboard toolbar keys -->
     <string name="clipboard_toolbar_keys">Select clipboard toolbar keys</string>

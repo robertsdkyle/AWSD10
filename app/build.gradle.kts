@@ -20,6 +20,14 @@ android {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
         }
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+        // GIF panel: put giphyApiKey=YOUR_KEY in local.properties (never commit it), or set GIPHY_API_KEY
+        val localProps = java.util.Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }
+        val giphyKey = (localProps.getProperty("giphyApiKey") ?: System.getenv("GIPHY_API_KEY") ?: "").trim()
+        buildConfigField("String", "GIPHY_API_KEY", "\"$giphyKey\"")
     }
 
     buildTypes {

@@ -34,6 +34,9 @@ import androidx.annotation.Nullable;
 
 import helium314.keyboard.event.Event;
 import helium314.keyboard.keyboard.clipboard.ClipboardHistoryView;
+import helium314.keyboard.keyboard.gif.GifPanelView;
+import helium314.keyboard.keyboard.gif.GifQuery;
+import helium314.keyboard.keyboard.gif.GifTextDeleter;
 import helium314.keyboard.keyboard.emoji.EmojiPalettesView;
 import helium314.keyboard.keyboard.internal.KeyboardState;
 import helium314.keyboard.keyboard.internal.LayoutDirective;
@@ -75,6 +78,7 @@ public final class KeyboardSwitcher {
     private SuggestionStripView mSuggestionStripView;
     private FrameLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
+    private GifPanelView mGifPanelView;
     private TextView mFakeToastView;
     private ImageView mBackgroundGatheringIndicator;
     private LatinIME mLatinIME;
@@ -152,6 +156,7 @@ public final class KeyboardSwitcher {
 
     public void loadKeyboard(EditorInfo editorInfo, SettingsValues settingsValues, int currentAutoCapsState,
                              @Nullable RecapitalizeMode currentRecapitalizeState, KeyboardLayoutSet.InternalAction internalAction) {
+        hideGifPanel(); // new text field (or reload): the panel's state belongs to the old one
         KeyboardLayoutSet.Builder builder = new KeyboardLayoutSet.Builder(mThemeContext, editorInfo, settingsValues);
         int keyboardWidth = ResourceUtils.getKeyboardWidth(mThemeContext, settingsValues);
         int keyboardHeight = ResourceUtils.getKeyboardHeight(mThemeContext.getResources(), settingsValues);
@@ -183,6 +188,7 @@ public final class KeyboardSwitcher {
     }
 
     public void onHideWindow() {
+        hideGifPanel();
         if (mKeyboardView != null) {
             mKeyboardView.onHideWindow();
         }
@@ -238,6 +244,11 @@ public final class KeyboardSwitcher {
         mStripContainer.setVisibility(stripVisibility);
         PointerTracker.switchTo(mKeyboardView);
         mKeyboardView.setVisibility(visibility);
+        if (isShowingGifPanel()) {
+            // e.g. a shift state update while the GIF panel is open: keep the panel on top
+            if (visibility == View.VISIBLE) mKeyboardView.setVisibility(View.INVISIBLE);
+            else hideGifPanel();
+        }
         // The visibility of {@link #mKeyboardView} must be aligned with {@link #MainKeyboardFrame}.
         // @see #getVisibleKeyboardView() and
         // @see LatinIME#onComputeInset(android.inputmethodservice.InputMethodService.Insets)
@@ -465,6 +476,41 @@ public final class KeyboardSwitcher {
         return false;
     }
 
+    public boolean isShowingGifPanel() {
+        return mGifPanelView != null && mGifPanelView.getVisibility() == View.VISIBLE;
+    }
+
+    /** Opens the GIF panel in place of the letters, or closes it if it's already open. */
+    public void toggleGifPanel(@NonNull GifQuery query, @NonNull GifTextDeleter deleter) {
+        if (isShowingGifPanel()) {
+            hideGifPanel();
+            return;
+        }
+        if (mGifPanelView == null || mKeyboardView == null || isShowingEmojiPalettes() || isShowingClipboardHistory()
+                || mKeyboardViewWrapper.getVisibility() != View.VISIBLE)
+            return;
+        final int width = mKeyboardView.getWidth();
+        final int height = mKeyboardView.getHeight();
+        if (width <= 0 || height <= 0) return;
+        final ViewGroup.LayoutParams lp = mGifPanelView.getLayoutParams();
+        lp.width = width;
+        lp.height = height;
+        mGifPanelView.setLayoutParams(lp);
+        // INVISIBLE (not GONE) keeps the keyboard's size, so the app below doesn't jump around
+        mKeyboardView.setVisibility(View.INVISIBLE);
+        mGifPanelView.setVisibility(View.VISIBLE);
+        mGifPanelView.start(query, mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener,
+                deleter, this::hideGifPanel);
+    }
+
+    public void hideGifPanel() {
+        if (!isShowingGifPanel()) return;
+        mGifPanelView.stop();
+        mGifPanelView.setVisibility(View.GONE);
+        if (mKeyboardView != null && mKeyboardView.getVisibility() == View.INVISIBLE)
+            mKeyboardView.setVisibility(View.VISIBLE);
+    }
+
     public boolean isShowingEmojiPalettes() {
         return mEmojiPalettesView != null && mEmojiPalettesView.isShown();
     }
@@ -522,6 +568,7 @@ public final class KeyboardSwitcher {
         if (mClipboardHistoryView != null) {
             mClipboardHistoryView.stopClipboardHistory();
         }
+        hideGifPanel();
     }
 
     public void trimMemory() {
@@ -550,6 +597,7 @@ public final class KeyboardSwitcher {
         mMainKeyboardFrame = mCurrentInputView.findViewById(R.id.main_keyboard_frame);
         mEmojiPalettesView = mCurrentInputView.findViewById(R.id.emoji_palettes_view);
         mClipboardHistoryView = mCurrentInputView.findViewById(R.id.clipboard_history_view);
+        mGifPanelView = mCurrentInputView.findViewById(R.id.gif_panel_view);
         mFakeToastView = mCurrentInputView.findViewById(R.id.fakeToast);
 
         mKeyboardViewWrapper = mCurrentInputView.findViewById(R.id.keyboard_view_wrapper);
@@ -639,6 +687,7 @@ public final class KeyboardSwitcher {
             if (DEBUG_ACTION) {
                 Log.d(TAG, "setEmojiKeyboard");
             }
+            hideGifPanel();
             mMainKeyboardFrame.setVisibility(View.VISIBLE);
             // The visibility of {@link #mKeyboardView} must be aligned with {@link #MainKeyboardFrame}.
             // @see #getVisibleKeyboardView() and
@@ -659,6 +708,7 @@ public final class KeyboardSwitcher {
             if (DEBUG_ACTION) {
                 Log.d(TAG, "setClipboardKeyboard");
             }
+            hideGifPanel();
             mMainKeyboardFrame.setVisibility(View.VISIBLE);
             // The visibility of {@link #mKeyboardView} must be aligned with {@link #MainKeyboardFrame}.
             // @see #getVisibleKeyboardView() and

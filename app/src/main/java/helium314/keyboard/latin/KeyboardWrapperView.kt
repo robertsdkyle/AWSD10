@@ -148,6 +148,8 @@ class KeyboardWrapperView @JvmOverloads constructor(
                 keyboardLeft + keyboardView.measuredWidth,
                 keyboardView.measuredHeight
         )
+        findViewById<View>(R.id.gif_panel_view)?.takeIf { it.visibility == View.VISIBLE }
+            ?.layout(keyboardLeft, 0, keyboardLeft + keyboardView.measuredWidth, keyboardView.measuredHeight)
 
         val scale = Settings.getValues().mKeyboardHeightScale
         // scale one-handed mode button height if keyboard height scale is < 80%
