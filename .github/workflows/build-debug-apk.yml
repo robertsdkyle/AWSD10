@@ -24,6 +24,8 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew assembleDebug
+        env:
+          GIPHY_API_KEY: ${{ secrets.GIPHY_API_KEY }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
