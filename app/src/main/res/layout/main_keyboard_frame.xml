@@ -16,6 +16,13 @@
         android:id="@+id/strip_container"
         layout="@layout/strip_container" />
 
+    <!-- replaces the strip while typing a GIF search, so keystrokes go into the search field -->
+    <helium314.keyboard.keyboard.gif.GifSearchStripView
+        android:id="@+id/gif_search_strip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+
     <!-- To ensure that key preview popup is correctly placed when the current system locale is
          one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
     <helium314.keyboard.latin.KeyboardWrapperView

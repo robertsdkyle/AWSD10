@@ -12,6 +12,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import helium314.keyboard.keyboard.KeyboardLayoutSet
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
+import helium314.keyboard.keyboard.gif.GifRecents
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.settings.Defaults
@@ -92,6 +93,8 @@ fun PreferencesScreen(
         if (clipboardHistoryEnabled) Settings.PREF_CLIPBOARD_USE_FILES else null,
         if (clipboardHistoryEnabled && prefs.getBoolean(Settings.PREF_CLIPBOARD_USE_FILES, Defaults.PREF_CLIPBOARD_USE_FILES))
             Settings.PREF_CLIPBOARD_FILES_SIZE_LIMIT else null,
+        R.string.settings_category_gifs,
+        Settings.PREF_ENABLE_GIFS,
     )
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -229,6 +232,11 @@ fun createPreferencesSettings(context: Context) = listOf(
     {
         val ctx = LocalContext.current
         SwitchPreference(it, Defaults.PREF_ENABLE_CLIPBOARD_HISTORY) { ClipboardDao.getInstance(ctx)?.clearNonPinned() }
+    },
+    Setting(context, Settings.PREF_ENABLE_GIFS, R.string.enable_gifs, R.string.enable_gifs_summary) {
+        val ctx = LocalContext.current
+        // turning GIFs off also forgets which ones were sent
+        SwitchPreference(it, Defaults.PREF_ENABLE_GIFS) { enabled -> if (!enabled) GifRecents(ctx).clear() }
     },
     Setting(context, Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME, R.string.clipboard_history_retention_time) { setting ->
         val ctx = LocalContext.current

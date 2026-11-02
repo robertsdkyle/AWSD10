@@ -34,8 +34,11 @@ import androidx.annotation.Nullable;
 
 import helium314.keyboard.event.Event;
 import helium314.keyboard.keyboard.clipboard.ClipboardHistoryView;
+import helium314.keyboard.keyboard.gif.GifController;
+import helium314.keyboard.keyboard.gif.GifModeHost;
 import helium314.keyboard.keyboard.gif.GifPanelView;
 import helium314.keyboard.keyboard.gif.GifQuery;
+import helium314.keyboard.keyboard.gif.GifSearchStripView;
 import helium314.keyboard.keyboard.gif.GifTextDeleter;
 import helium314.keyboard.keyboard.emoji.EmojiPalettesView;
 import helium314.keyboard.keyboard.internal.KeyboardState;
@@ -79,6 +82,9 @@ public final class KeyboardSwitcher {
     private FrameLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
     private GifPanelView mGifPanelView;
+    private GifSearchStripView mGifSearchStripView;
+    private GifController mGifController;
+    private final GifModeHost mGifHost = new GifHost();
     private TextView mFakeToastView;
     private ImageView mBackgroundGatheringIndicator;
     private LatinIME mLatinIME;
@@ -244,10 +250,11 @@ public final class KeyboardSwitcher {
         mStripContainer.setVisibility(stripVisibility);
         PointerTracker.switchTo(mKeyboardView);
         mKeyboardView.setVisibility(visibility);
-        if (isShowingGifPanel()) {
-            // e.g. a shift state update while the GIF panel is open: keep the panel on top
-            if (visibility == View.VISIBLE) mKeyboardView.setVisibility(View.INVISIBLE);
-            else hideGifPanel();
+        if (isGifModeActive()) {
+            // e.g. a shift state update while in GIF mode: keep the GIF views where they are
+            if (visibility != View.VISIBLE) hideGifPanel();
+            else if (mGifController.isTyping()) mStripContainer.setVisibility(View.GONE);
+            else mKeyboardView.setVisibility(View.INVISIBLE);
         }
         // The visibility of {@link #mKeyboardView} must be aligned with {@link #MainKeyboardFrame}.
         // @see #getVisibleKeyboardView() and
@@ -480,35 +487,108 @@ public final class KeyboardSwitcher {
         return mGifPanelView != null && mGifPanelView.getVisibility() == View.VISIBLE;
     }
 
-    /** Opens the GIF panel in place of the letters, or closes it if it's already open. */
-    public void toggleGifPanel(@NonNull GifQuery query, @NonNull GifTextDeleter deleter) {
-        if (isShowingGifPanel()) {
+    /** True while the GIF keyboard mode is open, whether showing the grid or the search strip. */
+    public boolean isGifModeActive() {
+        return mGifController != null && mGifController.isOpen();
+    }
+
+    /** True while keystrokes should go into the GIF search field instead of the app. */
+    public boolean isGifSearchTyping() {
+        return mGifController != null && mGifController.isTyping();
+    }
+
+    @Nullable public GifController getGifController() {
+        return mGifController;
+    }
+
+    /**
+     * Opens GIF mode with the grid in place of the letters, or closes it if it's already open.
+     * In a restricted field (password, incognito) the panel opens but loads nothing.
+     */
+    public void toggleGifPanel(@NonNull GifQuery query, boolean restricted, @NonNull GifTextDeleter deleter) {
+        if (isGifModeActive()) {
             hideGifPanel();
             return;
         }
-        if (mGifPanelView == null || mKeyboardView == null || isShowingEmojiPalettes() || isShowingClipboardHistory()
-                || mKeyboardViewWrapper.getVisibility() != View.VISIBLE)
+        if (mGifPanelView == null || mGifSearchStripView == null || mKeyboardView == null || isShowingEmojiPalettes()
+                || isShowingClipboardHistory() || mKeyboardViewWrapper.getVisibility() != View.VISIBLE)
             return;
-        final int width = mKeyboardView.getWidth();
-        final int height = mKeyboardView.getHeight();
-        if (width <= 0 || height <= 0) return;
-        final ViewGroup.LayoutParams lp = mGifPanelView.getLayoutParams();
-        lp.width = width;
-        lp.height = height;
-        mGifPanelView.setLayoutParams(lp);
-        // INVISIBLE (not GONE) keeps the keyboard's size, so the app below doesn't jump around
-        mKeyboardView.setVisibility(View.INVISIBLE);
-        mGifPanelView.setVisibility(View.VISIBLE);
-        mGifPanelView.start(query, mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener,
-                deleter, this::hideGifPanel);
+        if (mKeyboardView.getWidth() <= 0 || mKeyboardView.getHeight() <= 0) return;
+        if (mGifController == null) {
+            mGifController = new GifController(mLatinIME);
+            mGifPanelView.bind(mGifController);
+            mGifSearchStripView.bind(mGifController);
+        }
+        mGifPanelView.applyTheme();
+        mGifSearchStripView.applyTheme();
+        showGifGrid();
+        final String language = Settings.getValues().mLocale != null ? Settings.getValues().mLocale.getLanguage() : "en";
+        mGifController.open(query, restricted, mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener,
+                deleter, language, mGifHost);
     }
 
+    /** Leaves GIF mode and restores the normal keyboard. */
     public void hideGifPanel() {
-        if (!isShowingGifPanel()) return;
-        mGifPanelView.stop();
-        mGifPanelView.setVisibility(View.GONE);
+        final boolean wasActive = isGifModeActive();
+        if (mGifController != null) mGifController.close();
+        if (!wasActive && !isShowingGifPanel() && (mGifSearchStripView == null || mGifSearchStripView.getVisibility() != View.VISIBLE))
+            return;
+        if (mGifPanelView != null) mGifPanelView.setVisibility(View.GONE);
+        hideGifSearchStrip();
         if (mKeyboardView != null && mKeyboardView.getVisibility() == View.INVISIBLE)
             mKeyboardView.setVisibility(View.VISIBLE);
+    }
+
+    /** Grid over the (invisible, so the height doesn't change) letter keys. */
+    private void showGifGrid() {
+        hideGifSearchStrip();
+        final ViewGroup.LayoutParams lp = mGifPanelView.getLayoutParams();
+        lp.width = mKeyboardView.getWidth();
+        lp.height = mKeyboardView.getHeight();
+        mGifPanelView.setLayoutParams(lp);
+        mKeyboardView.setVisibility(View.INVISIBLE);
+        mGifPanelView.setVisibility(View.VISIBLE);
+    }
+
+    /** Letter keys back, with the search strip where the suggestions / toolbar usually are. */
+    private void showGifSearchStrip() {
+        mGifPanelView.setVisibility(View.GONE);
+        mKeyboardView.setVisibility(View.VISIBLE);
+        mStripContainer.setVisibility(View.GONE);
+        mGifSearchStripView.setVisibility(View.VISIBLE);
+        // swipes would produce words for the app, not the search; taps only while searching
+        mKeyboardView.setGestureHandlingEnabledByUser(false, false, false);
+        // start the search with plain lowercase letters, whatever the app's caps mode is
+        mState.onResetKeyboardStateToAlphabet(0, null);
+    }
+
+    private void hideGifSearchStrip() {
+        if (mGifSearchStripView == null || mGifSearchStripView.getVisibility() != View.VISIBLE) return;
+        mGifSearchStripView.setVisibility(View.GONE);
+        mStripContainer.setVisibility(mLatinIME.hasSuggestionStripView() ? View.VISIBLE : View.GONE);
+        final SettingsValues sv = Settings.getValues();
+        if (mKeyboardView != null)
+            mKeyboardView.setGestureHandlingEnabledByUser(sv.mGestureInputEnabled, sv.mGestureTrailEnabled,
+                    sv.mGestureFloatingPreviewTextEnabled);
+    }
+
+    private class GifHost implements GifModeHost {
+        @Override
+        public void showGifBrowse() {
+            if (mGifPanelView == null || mKeyboardView == null) return;
+            showGifGrid();
+        }
+
+        @Override
+        public void showGifTyping() {
+            if (mGifPanelView == null || mKeyboardView == null || mGifSearchStripView == null) return;
+            showGifSearchStrip();
+        }
+
+        @Override
+        public void closeGifMode() {
+            hideGifPanel();
+        }
     }
 
     public boolean isShowingEmojiPalettes() {
@@ -597,7 +677,15 @@ public final class KeyboardSwitcher {
         mMainKeyboardFrame = mCurrentInputView.findViewById(R.id.main_keyboard_frame);
         mEmojiPalettesView = mCurrentInputView.findViewById(R.id.emoji_palettes_view);
         mClipboardHistoryView = mCurrentInputView.findViewById(R.id.clipboard_history_view);
+        if (mGifController != null) {
+            // new views: drop the old ones' state
+            hideGifPanel();
+            mGifController.removeListener(mGifPanelView);
+            mGifController.removeListener(mGifSearchStripView);
+            mGifController = null;
+        }
         mGifPanelView = mCurrentInputView.findViewById(R.id.gif_panel_view);
+        mGifSearchStripView = mCurrentInputView.findViewById(R.id.gif_search_strip);
         mFakeToastView = mCurrentInputView.findViewById(R.id.fakeToast);
 
         mKeyboardViewWrapper = mCurrentInputView.findViewById(R.id.keyboard_view_wrapper);

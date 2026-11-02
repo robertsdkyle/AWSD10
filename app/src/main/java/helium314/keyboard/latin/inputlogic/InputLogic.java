@@ -43,6 +43,7 @@ import helium314.keyboard.latin.dictionary.DictionaryFactory;
 import helium314.keyboard.latin.LastComposedWord;
 import helium314.keyboard.latin.LatinIME;
 import helium314.keyboard.latin.NgramContext;
+import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputConnection;
 import helium314.keyboard.latin.SingleDictionaryFacilitator;
 import helium314.keyboard.latin.Suggest;
@@ -752,14 +753,22 @@ public final class InputLogic {
                 }
                 break;
             case KeyCode.GIF:
+                if (KeyboardSwitcher.getInstance().isGifModeActive()) {
+                    KeyboardSwitcher.getInstance().hideGifPanel();
+                    break;
+                }
+                if (!sv.mGifsEnabled) {
+                    KeyboardSwitcher.getInstance().showToast(mLatinIME.getString(R.string.gif_disabled), true);
+                    break;
+                }
                 // commit whatever word is being typed, then use the last few words as the GIF search
                 commitTyped(sv, LastComposedWord.NOT_A_SEPARATOR);
-                // never send what's typed in password / incognito fields to GIPHY
+                // password / incognito / no-learning fields: nothing typed there goes to GIPHY, and nothing loads
                 final boolean privateField = sv.mInputAttributes.mIsPasswordField || sv.mIncognitoModeEnabled;
                 final GifQuery gifQuery = privateField ? GifQuery.EMPTY
                         : GifQuery.fromTextBeforeCursor(mConnection.getTextBeforeCursor(80, 0));
                 final int gifCursor = mConnection.getExpectedSelectionStart();
-                KeyboardSwitcher.getInstance().toggleGifPanel(gifQuery, length -> {
+                KeyboardSwitcher.getInstance().toggleGifPanel(gifQuery, privateField, length -> {
                     // only delete the typed words if the cursor hasn't moved since the panel opened
                     if (mConnection.getExpectedSelectionStart() != gifCursor) return;
                     mConnection.beginBatchEdit();

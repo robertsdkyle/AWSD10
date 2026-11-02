@@ -431,6 +431,22 @@
     <string name="gif_no_results">No GIFs found</string>
     <string name="gif_load_failed">Couldn\'t load GIFs. Check your connection.</string>
     <string name="gif_missing_key">No GIPHY API key. Add giphyApiKey to local.properties and rebuild.</string>
+    <string name="gif_search_hint">Search GIPHY</string>
+    <string name="gif_clear_search">Clear search</string>
+    <string name="gif_back_to_grid">Back to GIFs</string>
+    <string name="gif_retry">Retry</string>
+    <string name="gif_section_recent">Recent</string>
+    <string name="gif_section_gifs">GIFs</string>
+    <string name="gif_section_stickers">Stickers</string>
+    <!-- %s is the text drawn on the sticker -->
+    <string name="gif_sticker_label">Sticker: %s</string>
+    <string name="gif_type_to_search">Type to search GIFs and make text stickers</string>
+    <string name="gif_restricted">GIFs are off in this field for privacy (password or incognito)</string>
+    <string name="gif_restricted_short">GIFs are off in this field</string>
+    <string name="gif_disabled">GIFs are turned off in Settings</string>
+    <string name="settings_category_gifs">GIFs</string>
+    <string name="enable_gifs">Enable GIFs</string>
+    <string name="enable_gifs_summary">GIF panel and text stickers. Searches are sent to GIPHY; stickers are made on your phone. Turning this off clears recent GIFs.</string>
     <string name="floating" tools:keep="@string/floating">Floating Keyboard</string>
     <!-- Title of the setting to set clipboard toolbar keys -->
     <string name="clipboard_toolbar_keys">Select clipboard toolbar keys</string>

@@ -22,6 +22,7 @@ import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.InputPointers
+import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.common.WordBreakIterator
 import helium314.keyboard.latin.common.combiningRange
 import helium314.keyboard.latin.common.stepsToCharCount
@@ -104,6 +105,7 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     }
 
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
+        if (keyboardSwitcher.isGifSearchTyping && onGifSearchInput(primaryCode, x, y, isKeyRepeat)) return
         when (primaryCode) {
             KeyCode.TOGGLE_AUTOCORRECT -> return settings.toggleAutoCorrect()
             KeyCode.TOGGLE_INCOGNITO_MODE -> {
@@ -152,7 +154,34 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
         metaAfterCodeInput(primaryCode)
     }
 
-    override fun onTextInput(text: String?) = latinIME.onTextInput(text)
+    override fun onTextInput(text: String?) {
+        if (keyboardSwitcher.isGifSearchTyping) {
+            if (text != null) keyboardSwitcher.gifController?.typeText(text)
+            return
+        }
+        latinIME.onTextInput(text)
+    }
+
+    /**
+     * While a GIF search is being typed, letters go into the search field, never the app.
+     * Returns false for keys that should keep their normal meaning (shift, symbols, language...).
+     */
+    private fun onGifSearchInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean): Boolean {
+        val gif = keyboardSwitcher.gifController ?: return false
+        when (primaryCode) {
+            in GIF_SEARCH_PASSTHROUGH_CODES -> return false
+            KeyCode.DELETE -> gif.backspace()
+            KeyCode.DELETE_WORD -> gif.deleteWord()
+            Constants.CODE_ENTER, KeyCode.SHIFT_ENTER, KeyCode.ACTION_NEXT, KeyCode.ACTION_PREVIOUS -> gif.finishTyping()
+            else -> if (primaryCode > 0) gif.typeText(StringUtils.newSingleCodePointString(primaryCode))
+            // any other function key (cursor moves, copy / paste, ...) would act on the app: ignore it
+        }
+        // keep the keyboard's own state machine going (one-shot shift, back to letters after a symbol...)
+        val mkv = keyboardSwitcher.mainKeyboardView
+        val event = Event.createSoftwareKeypressEvent(primaryCode, 0, mkv.getKeyX(x), mkv.getKeyY(y), isKeyRepeat)
+        keyboardSwitcher.onEvent(event, 0, null) // no auto-caps from the app's text
+        return true
+    }
 
     override fun onContent(content: InputContentInfoCompat) {
         val editorInfo = latinIME.currentInputEditorInfo
@@ -164,13 +193,29 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
         }
     }
 
-    override fun onStartBatchInput() = latinIME.onStartBatchInput()
+    override fun onStartBatchInput() {
+        // gesture typing is switched off while searching GIFs; drop a gesture that started before
+        if (keyboardSwitcher.isGifSearchTyping) return
+        latinIME.onStartBatchInput()
+    }
 
-    override fun onUpdateBatchInput(batchPointers: InputPointers?) = latinIME.onUpdateBatchInput(batchPointers)
+    override fun onUpdateBatchInput(batchPointers: InputPointers?) {
+        // gesture typing is switched off while searching GIFs; drop a gesture that started before
+        if (keyboardSwitcher.isGifSearchTyping) return
+        latinIME.onUpdateBatchInput(batchPointers)
+    }
 
-    override fun onEndBatchInput(batchPointers: InputPointers?) = latinIME.onEndBatchInput(batchPointers)
+    override fun onEndBatchInput(batchPointers: InputPointers?) {
+        // gesture typing is switched off while searching GIFs; drop a gesture that started before
+        if (keyboardSwitcher.isGifSearchTyping) return
+        latinIME.onEndBatchInput(batchPointers)
+    }
 
-    override fun onCancelBatchInput() = latinIME.onCancelBatchInput()
+    override fun onCancelBatchInput() {
+        // gesture typing is switched off while searching GIFs; drop a gesture that started before
+        if (keyboardSwitcher.isGifSearchTyping) return
+        latinIME.onCancelBatchInput()
+    }
 
     // User released a finger outside any key
     override fun onCancelInput() { }
@@ -514,6 +559,14 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     }
 
     companion object {
+        /** Keys that keep working normally while typing a GIF search: they change the keyboard, not the text. */
+        private val GIF_SEARCH_PASSTHROUGH_CODES = setOf(
+            KeyCode.SHIFT, KeyCode.CAPS_LOCK, KeyCode.SYMBOL_ALPHA, KeyCode.SYMBOL, KeyCode.ALPHA, KeyCode.NUMPAD,
+            KeyCode.LANGUAGE_SWITCH, KeyCode.SYSTEM_INPUT_METHOD_PICKER, KeyCode.IME_HIDE_UI, KeyCode.EMOJI,
+            KeyCode.CLIPBOARD, KeyCode.SETTINGS, KeyCode.GIF, KeyCode.TOGGLE_ONE_HANDED_MODE,
+            KeyCode.TOGGLE_ONE_HANDED_MODE_2, KeyCode.SWITCH_ONE_HANDED_MODE, KeyCode.SPLIT_LAYOUT,
+        )
+
         private enum class MetaPressState {
             UNSET, // default state, not active
             SET, // enabled without onPressKey (e.g. in popup)

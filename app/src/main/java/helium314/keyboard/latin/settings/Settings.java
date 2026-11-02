@@ -172,6 +172,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_TOUCHPAD_EDGE_SCROLL = "touchpad_edge_scroll";
 
     public static final String PREF_ENABLE_CLIPBOARD_HISTORY = "enable_clipboard_history";
+    public static final String PREF_ENABLE_GIFS = "enable_gifs";
     public static final String PREF_CLIPBOARD_HISTORY_RETENTION_TIME = "clipboard_history_retention_time";
     public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
     public static final String PREF_CLIPBOARD_USE_FILES = "clipboard_histor_usey_files";
