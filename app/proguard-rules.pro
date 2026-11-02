@@ -12,3 +12,6 @@
 # after upgrading to gradle 8, stack traces contain "unknown source"
 -keepattributes SourceFile,LineNumberTable
 -dontobfuscate
+
+# Glide only uses AppCompat when the app has it (for vector drawable resources); this app doesn't
+-dontwarn androidx.appcompat.**
